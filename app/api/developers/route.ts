@@ -1,6 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
-import type { DeveloperFilters } from "@/lib/types";
+import type { DeveloperFilters, Developer } from "@/lib/types";
+
+export async function POST(request: NextRequest) {
+  const supabase = createServerSupabase();
+
+  try {
+    const body = await request.json();
+    const {
+      name,
+      state,
+      city,
+      deals_in_market,
+      total_deals_nationwide,
+      total_volume_market,
+      avg_sale_price_market,
+      is_corp_llc,
+      sample_addresses,
+      stage = "Prospect",
+    } = body;
+
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Developer name is required" },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("developers")
+      .insert({
+        name: name.trim(),
+        state: state || null,
+        city: city || null,
+        deals_in_market: deals_in_market ?? null,
+        total_deals_nationwide: total_deals_nationwide ?? null,
+        total_volume_market: total_volume_market ?? null,
+        avg_sale_price_market: avg_sale_price_market ?? null,
+        is_corp_llc: is_corp_llc ?? false,
+        sample_addresses: sample_addresses || null,
+        stage: stage || "Prospect",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json(
+        { error: "Failed to create developer" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data as Developer, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create developer:", error);
+    return NextResponse.json(
+      { error: "Failed to create developer" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function GET(request: NextRequest) {
   const supabase = createServerSupabase();

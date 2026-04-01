@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/components/AppShell";
+import DeveloperModal from "@/app/components/DeveloperModal";
 import StageSelector, { StageBadge } from "@/app/components/StageSelector";
 import type { Developer, DeveloperNote, Stage } from "@/lib/types";
 
@@ -27,6 +28,7 @@ function formatDate(dateStr: string): string {
 
 export default function DeveloperDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [developer, setDeveloper] = useState<Developer | null>(null);
@@ -35,6 +37,8 @@ export default function DeveloperDetailPage() {
   const [noteContent, setNoteContent] = useState("");
   const [submittingNote, setSubmittingNote] = useState(false);
   const [updatingStage, setUpdatingStage] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchDeveloper = useCallback(async () => {
     try {
@@ -102,6 +106,34 @@ export default function DeveloperDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this developer? This cannot be undone.")) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/developers/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        router.push("/");
+      } else {
+        alert("Failed to delete developer");
+      }
+    } catch {
+      alert("An error occurred while deleting");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setModalOpen(false);
+    fetchDeveloper();
+  };
+
   if (loading) {
     return (
       <AppShell>
@@ -164,7 +196,22 @@ export default function DeveloperDetailPage() {
                 </span>
               </div>
             </div>
-            <StageBadge stage={developer.stage} />
+            <div className="flex items-center gap-2">
+              <StageBadge stage={developer.stage} />
+              <button
+                onClick={() => setModalOpen(true)}
+                className="px-3 py-1.5 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition"
+              >
+                Edit
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-3 py-1.5 text-sm rounded-lg bg-red-900/30 hover:bg-red-900/50 disabled:bg-red-900/20 text-red-300 transition"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -243,6 +290,14 @@ export default function DeveloperDetailPage() {
           </div>
         </div>
       </div>
+
+      <DeveloperModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleEditSuccess}
+        developer={developer}
+        mode="edit"
+      />
     </AppShell>
   );
 }

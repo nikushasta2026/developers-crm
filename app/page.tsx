@@ -1,12 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import AppShell from "./components/AppShell";
 import DeveloperTable from "./components/DeveloperTable";
+import DeveloperModal from "./components/DeveloperModal";
 import FiltersPanel, { type FilterValues } from "./components/FiltersPanel";
 import type { Developer, PaginatedResponse } from "@/lib/types";
 
-export default function DevelopersPage() {
+function DevelopersPageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [data, setData] = useState<PaginatedResponse<Developer> | null>(null);
   const [loading, setLoading] = useState(true);
   const [states, setStates] = useState<string[]>([]);
@@ -14,12 +19,14 @@ export default function DevelopersPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<FilterValues>({
-    search: "",
-    state: "",
-    stage: "",
-    min_deals: "",
-    min_volume: "",
+    search: searchParams.get("search") || "",
+    state: searchParams.get("state") || "",
+    stage: searchParams.get("stage") || "",
+    min_deals: searchParams.get("min_deals") || "",
+    min_volume: searchParams.get("min_volume") || "",
   });
+
+  const [modalOpen, setModalOpen] = useState(false);
 
   const fetchDevelopers = useCallback(async () => {
     setLoading(true);
@@ -75,10 +82,26 @@ export default function DevelopersPage() {
   const handleFiltersChange = useCallback((newFilters: FilterValues) => {
     setFilters(newFilters);
     setPage(1);
-  }, []);
+
+    // Update URL params
+    const params = new URLSearchParams();
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+
+    const newUrl = params.toString()
+      ? `?${params.toString()}`
+      : window.location.pathname;
+    router.push(newUrl);
+  }, [router]);
 
   const handleExport = (format: "csv" | "json") => {
     window.open(`/api/developers/export?format=${format}`, "_blank");
+  };
+
+  const handleAddSuccess = () => {
+    setModalOpen(false);
+    fetchDevelopers();
   };
 
   return (
@@ -92,6 +115,15 @@ export default function DevelopersPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={() => setModalOpen(true)}
+              className="px-3 py-1.5 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Developer
+            </button>
             <button
               onClick={() => handleExport("csv")}
               className="px-3 py-1.5 text-sm rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5"
@@ -118,6 +150,7 @@ export default function DevelopersPage() {
             <FiltersPanel
               states={states}
               onFiltersChange={handleFiltersChange}
+              initialFilters={filters}
             />
           </div>
 
@@ -164,7 +197,22 @@ export default function DevelopersPage() {
             )}
           </div>
         </div>
+
+        <DeveloperModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleAddSuccess}
+          mode="add"
+        />
       </div>
     </AppShell>
+  );
+}
+
+export default function DevelopersPage() {
+  return (
+    <Suspense fallback={<AppShell><div className="p-6 text-slate-400">Loading...</div></AppShell>}>
+      <DevelopersPageContent />
+    </Suspense>
   );
 }
