@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import pool from "@/lib/db";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 export async function GET(
   _request: NextRequest,
@@ -10,13 +10,23 @@ export async function GET(
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
-  try {
-    const result = await pool.query(
-      "SELECT * FROM developer_notes WHERE developer_id = $1 ORDER BY created_at DESC",
-      [id]
-    );
+  const supabase = createServerSupabase();
 
-    return NextResponse.json(result.rows);
+  try {
+    const { data, error } = await supabase
+      .from("developer_notes")
+      .select("*")
+      .eq("developer_id", id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return NextResponse.json(
+        { error: "Failed to fetch notes" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data || []);
   } catch (error) {
     console.error("Failed to fetch notes:", error);
     return NextResponse.json(
@@ -35,6 +45,8 @@ export async function POST(
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
+  const supabase = createServerSupabase();
+
   try {
     const body = await request.json();
     const { content } = body;
@@ -46,23 +58,34 @@ export async function POST(
       );
     }
 
-    const devCheck = await pool.query(
-      "SELECT id FROM developers WHERE id = $1",
-      [id]
-    );
-    if (devCheck.rows.length === 0) {
+    // Verify developer exists
+    const { data: dev } = await supabase
+      .from("developers")
+      .select("id")
+      .eq("id", id)
+      .single();
+
+    if (!dev) {
       return NextResponse.json(
         { error: "Developer not found" },
         { status: 404 }
       );
     }
 
-    const result = await pool.query(
-      "INSERT INTO developer_notes (developer_id, content) VALUES ($1, $2) RETURNING *",
-      [id, content.trim()]
-    );
+    const { data, error } = await supabase
+      .from("developer_notes")
+      .insert({ developer_id: id, content: content.trim() })
+      .select()
+      .single();
 
-    return NextResponse.json(result.rows[0], { status: 201 });
+    if (error) {
+      return NextResponse.json(
+        { error: "Failed to create note" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error("Failed to create note:", error);
     return NextResponse.json(

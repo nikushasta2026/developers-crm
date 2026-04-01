@@ -1,35 +1,33 @@
 "use client";
 
-import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
+import { createClient } from "@/lib/supabase";
 
-function LoginForm() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
-      redirect: false,
     });
 
-    if (result?.error) {
-      setError("Invalid email or password");
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
     } else {
-      router.push(callbackUrl);
+      router.push("/");
+      router.refresh();
     }
   }
 
@@ -38,10 +36,10 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold">
-            <span className="text-indigo-400">Lux</span> CRM
+            <span className="text-indigo-400">Dev</span> CRM
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Luxury Real Estate Developer Management
+            Developer Relationship Management
           </p>
         </div>
 
@@ -94,19 +92,5 @@ function LoginForm() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-          <div className="text-slate-500">Loading...</div>
-        </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
   );
 }

@@ -8,7 +8,7 @@ import StageSelector, { StageBadge } from "@/app/components/StageSelector";
 import type { Developer, DeveloperNote, Stage } from "@/lib/types";
 
 function formatVolume(cents: number | null): string {
-  if (cents === null || cents === undefined) return "—";
+  if (cents === null || cents === undefined) return "";
   const millions = cents / 1_000_000;
   if (millions >= 1) return `$${millions.toFixed(1)}m`;
   const thousands = cents / 1_000;
@@ -40,8 +40,7 @@ export default function DeveloperDetailPage() {
     try {
       const res = await fetch(`/api/developers/${id}`);
       if (res.ok) {
-        const data = await res.json();
-        setDeveloper(data);
+        setDeveloper(await res.json());
       }
     } catch {
       console.error("Failed to fetch developer");
@@ -52,8 +51,7 @@ export default function DeveloperDetailPage() {
     try {
       const res = await fetch(`/api/developers/${id}/notes`);
       if (res.ok) {
-        const data = await res.json();
-        setNotes(data);
+        setNotes(await res.json());
       }
     } catch {
       console.error("Failed to fetch notes");
@@ -75,8 +73,7 @@ export default function DeveloperDetailPage() {
         body: JSON.stringify({ stage }),
       });
       if (res.ok) {
-        const updated = await res.json();
-        setDeveloper(updated);
+        setDeveloper(await res.json());
       }
     } catch {
       console.error("Failed to update stage");
@@ -120,10 +117,7 @@ export default function DeveloperDetailPage() {
       <AppShell>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <div className="text-slate-400">Developer not found</div>
-          <Link
-            href="/"
-            className="text-indigo-400 hover:text-indigo-300 text-sm transition"
-          >
+          <Link href="/" className="text-indigo-400 hover:text-indigo-300 text-sm transition">
             Back to developers
           </Link>
         </div>
@@ -132,10 +126,7 @@ export default function DeveloperDetailPage() {
   }
 
   const addresses = developer.sample_addresses
-    ? developer.sample_addresses
-        .split(/[;\n]/)
-        .map((a) => a.trim())
-        .filter(Boolean)
+    ? developer.sample_addresses.split(/[;\n]/).map((a) => a.trim()).filter(Boolean)
     : [];
 
   return (
@@ -145,18 +136,8 @@ export default function DeveloperDetailPage() {
           href="/"
           className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition mb-6"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Back to developers
         </Link>
@@ -169,9 +150,7 @@ export default function DeveloperDetailPage() {
               <div className="flex items-center gap-3 mt-2">
                 {developer.state && (
                   <span className="text-sm text-slate-400">
-                    {developer.city
-                      ? `${developer.city}, ${developer.state}`
-                      : developer.state}
+                    {developer.city ? `${developer.city}, ${developer.state}` : developer.state}
                   </span>
                 )}
                 <span
@@ -189,30 +168,15 @@ export default function DeveloperDetailPage() {
           </div>
         </div>
 
-        {/* Stats Row */}
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
-            {
-              label: "Deals in Market",
-              value: developer.deals_in_market ?? "—",
-            },
-            {
-              label: "Total Deals Nationwide",
-              value: developer.total_deals_nationwide ?? "—",
-            },
-            {
-              label: "Volume",
-              value: formatVolume(developer.total_volume_market),
-            },
-            {
-              label: "Avg Price",
-              value: formatVolume(developer.avg_sale_price_market),
-            },
+            { label: "Deals in Market", value: developer.deals_in_market ?? "" },
+            { label: "Total Deals Nationwide", value: developer.total_deals_nationwide ?? "" },
+            { label: "Volume", value: formatVolume(developer.total_volume_market) },
+            { label: "Avg Price", value: formatVolume(developer.avg_sale_price_market) },
           ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-4"
-            >
+            <div key={stat.label} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
               <p className="text-xs text-slate-400 mb-1">{stat.label}</p>
               <p className="text-xl font-bold text-white">{stat.value}</p>
             </div>
@@ -222,9 +186,7 @@ export default function DeveloperDetailPage() {
         {/* Sample Addresses */}
         {addresses.length > 0 && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
-            <h2 className="text-sm font-semibold text-slate-200 mb-3">
-              Sample Addresses
-            </h2>
+            <h2 className="text-sm font-semibold text-slate-200 mb-3">Sample Addresses</h2>
             <ul className="space-y-1.5">
               {addresses.map((addr, i) => (
                 <li key={i} className="text-sm text-slate-400 flex items-start gap-2">
@@ -238,9 +200,7 @@ export default function DeveloperDetailPage() {
 
         {/* Deal Stage */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
-          <h2 className="text-sm font-semibold text-slate-200 mb-4">
-            Deal Stage
-          </h2>
+          <h2 className="text-sm font-semibold text-slate-200 mb-4">Deal Stage</h2>
           <StageSelector
             currentStage={developer.stage}
             onStageChange={handleStageChange}
@@ -251,7 +211,6 @@ export default function DeveloperDetailPage() {
         {/* Notes */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
           <h2 className="text-sm font-semibold text-slate-200 mb-4">Notes</h2>
-
           <div className="mb-6">
             <textarea
               value={noteContent}
@@ -270,24 +229,14 @@ export default function DeveloperDetailPage() {
               </button>
             </div>
           </div>
-
           <div className="space-y-3">
             {notes.length === 0 ? (
-              <p className="text-sm text-slate-500 py-4 text-center">
-                No notes yet
-              </p>
+              <p className="text-sm text-slate-500 py-4 text-center">No notes yet</p>
             ) : (
               notes.map((note) => (
-                <div
-                  key={note.id}
-                  className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4"
-                >
-                  <p className="text-sm text-slate-300 whitespace-pre-wrap">
-                    {note.content}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-2">
-                    {formatDate(note.created_at)}
-                  </p>
+                <div key={note.id} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
+                  <p className="text-sm text-slate-300 whitespace-pre-wrap">{note.content}</p>
+                  <p className="text-xs text-slate-500 mt-2">{formatDate(note.created_at)}</p>
                 </div>
               ))
             )}

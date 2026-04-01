@@ -13,7 +13,13 @@ export default function DevelopersPage() {
   const [sortBy, setSortBy] = useState("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState<FilterValues>({ search: "", state: "", stage: "", min_deals: "", min_volume: "" });
+  const [filters, setFilters] = useState<FilterValues>({
+    search: "",
+    state: "",
+    stage: "",
+    min_deals: "",
+    min_volume: "",
+  });
 
   const fetchDevelopers = useCallback(async () => {
     setLoading(true);
@@ -51,8 +57,7 @@ export default function DevelopersPage() {
             .map((d: Developer) => d.state)
             .filter(Boolean) as string[]
         );
-        const uniqueStates = Array.from(stateSet).sort();
-        setStates(uniqueStates);
+        setStates(Array.from(stateSet).sort());
       })
       .catch(() => {});
   }, []);
@@ -67,22 +72,45 @@ export default function DevelopersPage() {
     setPage(1);
   };
 
-  const handleFiltersChange = useCallback(
-    (newFilters: FilterValues) => {
-      setFilters(newFilters);
-      setPage(1);
-    },
-    []
-  );
+  const handleFiltersChange = useCallback((newFilters: FilterValues) => {
+    setFilters(newFilters);
+    setPage(1);
+  }, []);
+
+  const handleExport = (format: "csv" | "json") => {
+    window.open(`/api/developers/export?format=${format}`, "_blank");
+  };
 
   return (
     <AppShell>
       <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Developers</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            {data ? `${data.total} developers` : "Loading..."}
-          </p>
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Developers</h1>
+            <p className="text-sm text-slate-400 mt-1">
+              {data ? `${data.total} developers` : "Loading..."}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleExport("csv")}
+              className="px-3 py-1.5 text-sm rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              CSV
+            </button>
+            <button
+              onClick={() => handleExport("json")}
+              className="px-3 py-1.5 text-sm rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              JSON
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-6">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import pool from "@/lib/db";
+import { createServerSupabase } from "@/lib/supabase-server";
 import { STAGES, type Stage } from "@/lib/types";
 
 export async function GET(
@@ -11,19 +11,23 @@ export async function GET(
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
-  try {
-    const result = await pool.query("SELECT * FROM developers WHERE id = $1", [
-      id,
-    ]);
+  const supabase = createServerSupabase();
 
-    if (result.rows.length === 0) {
+  try {
+    const { data, error } = await supabase
+      .from("developers")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error || !data) {
       return NextResponse.json(
         { error: "Developer not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json(data);
   } catch (error) {
     console.error("Failed to fetch developer:", error);
     return NextResponse.json(
@@ -42,6 +46,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
+  const supabase = createServerSupabase();
+
   try {
     const body = await request.json();
     const { stage } = body;
@@ -50,19 +56,21 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid stage" }, { status: 400 });
     }
 
-    const result = await pool.query(
-      "UPDATE developers SET stage = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
-      [stage, id]
-    );
+    const { data, error } = await supabase
+      .from("developers")
+      .update({ stage, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
 
-    if (result.rows.length === 0) {
+    if (error || !data) {
       return NextResponse.json(
         { error: "Developer not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(result.rows[0]);
+    return NextResponse.json(data);
   } catch (error) {
     console.error("Failed to update developer:", error);
     return NextResponse.json(
