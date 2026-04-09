@@ -40,9 +40,17 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    user = authUser;
+  } catch (error) {
+    console.error('Error getting user from Supabase:', error);
+    // If Supabase auth fails, treat as no user
+    user = null;
+  }
 
   if (
     !user &&
