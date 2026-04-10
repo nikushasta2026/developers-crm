@@ -20,15 +20,9 @@ export interface Developer {
   is_corp_llc: boolean;
   sample_addresses: string | null;
   stage: Stage;
+  notes: string | null;
   created_at: string;
   updated_at: string;
-}
-
-export interface DeveloperNote {
-  id: number;
-  developer_id: number;
-  content: string;
-  created_at: string;
 }
 
 export interface DeveloperFilters {

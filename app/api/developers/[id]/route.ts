@@ -61,6 +61,7 @@ export async function PATCH(
       is_corp_llc,
       sample_addresses,
       stage,
+      notes,
     } = body;
 
     // Build update object with only provided fields
@@ -75,6 +76,7 @@ export async function PATCH(
     if (avg_sale_price_market !== undefined) updateData.avg_sale_price_market = avg_sale_price_market;
     if (is_corp_llc !== undefined) updateData.is_corp_llc = is_corp_llc;
     if (sample_addresses !== undefined) updateData.sample_addresses = sample_addresses;
+    if (notes !== undefined) updateData.notes = notes;
     if (stage !== undefined) {
       if (!STAGES.includes(stage as Stage)) {
         return NextResponse.json({ error: "Invalid stage" }, { status: 400 });

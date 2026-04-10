@@ -6,7 +6,7 @@ import Link from "next/link";
 import AppShell from "@/app/components/AppShell";
 import DeveloperModal from "@/app/components/DeveloperModal";
 import StageSelector, { StageBadge } from "@/app/components/StageSelector";
-import type { Developer, DeveloperNote, Stage } from "@/lib/types";
+import type { Developer, Stage } from "@/lib/types";
 
 function formatVolume(cents: number | null): string {
   if (cents === null || cents === undefined) return "";
@@ -16,57 +16,36 @@ function formatVolume(cents: number | null): string {
   return `$${thousands.toFixed(0)}k`;
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 export default function DeveloperDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
   const [developer, setDeveloper] = useState<Developer | null>(null);
-  const [notes, setNotes] = useState<DeveloperNote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [noteContent, setNoteContent] = useState("");
-  const [submittingNote, setSubmittingNote] = useState(false);
   const [updatingStage, setUpdatingStage] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
 
   const fetchDeveloper = useCallback(async () => {
     try {
       const res = await fetch(`/api/developers/${id}`);
       if (res.ok) {
-        setDeveloper(await res.json());
+        const data = await res.json();
+        setDeveloper(data);
+        setNotesValue(data.notes || "");
       }
     } catch {
       console.error("Failed to fetch developer");
     }
   }, [id]);
 
-  const fetchNotes = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/developers/${id}/notes`);
-      if (res.ok) {
-        setNotes(await res.json());
-      }
-    } catch {
-      console.error("Failed to fetch notes");
-    }
-  }, [id]);
-
   useEffect(() => {
-    Promise.all([fetchDeveloper(), fetchNotes()]).finally(() =>
-      setLoading(false)
-    );
-  }, [fetchDeveloper, fetchNotes]);
+    fetchDeveloper().finally(() => setLoading(false));
+  }, [fetchDeveloper]);
 
   const handleStageChange = async (stage: Stage) => {
     setUpdatingStage(true);
@@ -86,24 +65,29 @@ export default function DeveloperDetailPage() {
     }
   };
 
-  const handleAddNote = async () => {
-    if (!noteContent.trim()) return;
-    setSubmittingNote(true);
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
     try {
-      const res = await fetch(`/api/developers/${id}/notes`, {
-        method: "POST",
+      const res = await fetch(`/api/developers/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: noteContent.trim() }),
+        body: JSON.stringify({ notes: notesValue.trim() || null }),
       });
       if (res.ok) {
-        setNoteContent("");
-        await fetchNotes();
+        const updated = await res.json();
+        setDeveloper(updated);
+        setEditingNotes(false);
       }
     } catch {
-      console.error("Failed to add note");
+      console.error("Failed to save notes");
     } finally {
-      setSubmittingNote(false);
+      setSavingNotes(false);
     }
+  };
+
+  const handleCancelNotes = () => {
+    setNotesValue(developer?.notes || "");
+    setEditingNotes(false);
   };
 
   const handleDelete = async () => {
@@ -255,39 +239,58 @@ export default function DeveloperDetailPage() {
           />
         </div>
 
-        {/* Notes */}
+        {/* Notes - Single Editable Box */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-slate-200 mb-4">Notes</h2>
-          <div className="mb-6">
-            <textarea
-              value={noteContent}
-              onChange={(e) => setNoteContent(e.target.value)}
-              placeholder="Add a note..."
-              rows={3}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-            />
-            <div className="flex justify-end mt-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-slate-200">Notes</h2>
+            {!editingNotes && (
               <button
-                onClick={handleAddNote}
-                disabled={submittingNote || !noteContent.trim()}
-                className="px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-lg transition"
+                onClick={() => setEditingNotes(true)}
+                className="text-xs text-indigo-400 hover:text-indigo-300 transition"
               >
-                {submittingNote ? "Adding..." : "Add Note"}
+                {developer.notes ? "Edit" : "Add Note"}
               </button>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {notes.length === 0 ? (
-              <p className="text-sm text-slate-500 py-4 text-center">No notes yet</p>
-            ) : (
-              notes.map((note) => (
-                <div key={note.id} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4">
-                  <p className="text-sm text-slate-300 whitespace-pre-wrap">{note.content}</p>
-                  <p className="text-xs text-slate-500 mt-2">{formatDate(note.created_at)}</p>
-                </div>
-              ))
             )}
           </div>
+
+          {editingNotes ? (
+            <div className="space-y-3">
+              <textarea
+                value={notesValue}
+                onChange={(e) => setNotesValue(e.target.value)}
+                placeholder="Enter notes here..."
+                rows={6}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={handleCancelNotes}
+                  disabled={savingNotes}
+                  className="px-3 py-2 text-sm font-medium bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800 text-slate-300 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                  className="px-3 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-lg transition"
+                >
+                  {savingNotes ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => setEditingNotes(true)}
+              className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 cursor-pointer hover:bg-slate-800/70 transition"
+            >
+              {developer.notes ? (
+                <p className="text-sm text-slate-300 whitespace-pre-wrap">{developer.notes}</p>
+              ) : (
+                <p className="text-sm text-slate-500 italic">Click to add a note...</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
